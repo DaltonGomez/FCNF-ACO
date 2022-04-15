@@ -1,0 +1,6 @@
+NOTES:
+
+# FUTURE INTEGRATION W/ GA:
+> We maintain a set of alpha values in the ACO and use them to calculate the "goodness" of an edge. We then use the ACO
+> to return discovered paths to the GA, which modifies the alpha values. The GA then returns new alpha values to the ACO.
+> The process is repeated in parallel until convergence.

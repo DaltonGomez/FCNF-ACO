@@ -2,6 +2,7 @@ import random
 import sys
 
 from src.Network.FlowNetwork import FlowNetwork
+from src.Network.Solution import Solution
 
 
 class Ant:
@@ -10,14 +11,18 @@ class Ant:
     # =========================================
     # ============== CONSTRUCTOR ==============
     # =========================================
-    def __init__(self, network: FlowNetwork, minTargetFlow: float):
+    def __init__(self, network: FlowNetwork, minTargetFlow: float, alpha: float, beta: float):
         """Constructor of an Ant instance"""
         # Input Attributes
-        self.network = network
-        self.minTargetFlow = minTargetFlow
+        self.network = network  # Input network data
+        self.minTargetFlow = minTargetFlow  # Target flow to assign
 
         # Hyperparameters
-        self.flowCarriedPerTrip = 10.0  # The size of the ant's "backpack"
+        self.flowCarriedPerTrip = 20.0  # The size of the ant's "backpack"
+        # TODO - Update/improve so that this is dynamic throughout a tour/trip
+        # TODO - As it stands, this implementation (i.e. fixed backpack size always filled) cannot handle anything but target flows that are a multiple of the backpack size
+        self.alpha = alpha  # alpha = Relative importance to the ant of pheromone over "goodness" of arc
+        self.beta = beta  # beta = Relative importance to the ant of "goodness" of arc over pheromone
 
         # Tour Attributes
         # NOTE: A "tour" is a complete feasible solution that assigns all target flow across the network in a number of trips
@@ -35,10 +40,20 @@ class Ant:
         # NOTE: A "trip" is a single supersource -> supersink path that assigns only x amount of flow
         self.tripStack = []  # Maintains the arcs traveled on the current trip (NOTE: Should be treated as a true stack- push/pop only!
         self.arcsVisitedThisTrip = set()  # Maintains a set to prevent taking the same arc twice
-        # TODO - Originally the set data structure was to prevent cycles, while it prevents continuously going back and forth, it does not prevent cycles
+        # TODO - Originally the arcsVisited data structure was to prevent cycles, while it prevents continuously going back and forth, it does not prevent cycles but can cause deadlock
 
-    def findSolution(self) -> dict:
+        # Solution Attributes (Written after an ant completes a tour)
+        self.trueCost = 0.0
+        self.sourceFlows = []
+        self.sinkFlows = []
+        self.arcFlows = {}
+        self.arcsOpened = {}
+
+    def findSolution(self, pheromoneDict: dict, goodnessDict: dict) -> None:
         """Main loop that has the ant explore the graph space until a feasible solution is discovered"""
+        # Update dictionaries for determining edge selection before solving
+        self.pheromoneDict = pheromoneDict  # Dictionary indexed on key (fromNode, toNode, cap) with value (pheromone deposited in previous episodes)
+        self.goodnessDict = goodnessDict  # Dictionary indexed on key (fromNode, toNode, cap) with value (eta) (i.e. the "goodness" of taking that arc)
         # TOUR LOOP
         while self.remainingFlowToAssign > 0.0:  # While all flow is not delivered
             # PRE-TRIP SETUP
@@ -49,14 +64,15 @@ class Ant:
             while self.currentPosition != -2:  # Explore until the supersink is found
                 options = self.getPossibleNextMoves()  # Get options for next move by checking non-full adjacent edges
                 arcChoice = self.decideArcToTraverse(options)  # Probabilistically choose a next arc
-                self.printTimeStepData(arcChoice)  # Print action for debugging/QA
+                # self.printTimeStepData(arcChoice)  # Print action for debugging/QA
                 self.travelArc(arcChoice)  # Move the ant across the arc and assign flow
             # POST-TRIP ACCOUNTING
             self.remainingFlowToAssign -= self.flowCarriedOnCurrentTrip  # Deduct remaining flow from "mountain"
             self.flowDeliveredToSinks += self.flowCarriedOnCurrentTrip  # Deposit flow in supersink
             self.numTrips += 1  # Increment trips
-            self.printTripData()  # Print trip for debugging/QA
-        return self.assignedFlowDict  # Return where flow was assigned (Not really necessary as it is an instance field)
+            # self.printTripData()  # Print trip for debugging/QA
+        self.computeResultingNetwork()  # Calculates the cost and data structures for writing to a solution object
+        # print("Solution Cost = " + str(self.trueCost))
 
     def getPossibleNextMoves(self) -> list:
         """Returns the possible options the ant could take on their next timestep"""
@@ -90,14 +106,35 @@ class Ant:
                         options.append((nodeObj.nodeID, -2, self.network.sinkCapsArray[sinkIndex]))
         return options
 
-    @staticmethod
-    def decideArcToTraverse(options: list) -> tuple:
+    def decideArcToTraverse(self, options: list) -> tuple:
         """Probabilistically selects the arc the ant will travel on the next timestep"""
-        # TODO - Implement based on pheromone/goodness of arc... Currently a random walk until everything else is working
-        # TODO - Implementation should strongly discredit backtracks (unless its the only option)
+        # TODO - Implement based on pheromone/goodness of arc... Currently doing the roulette wheel from the concave cost NFP paper
+        # TODO - Determine a "goodness of arc" function... How will we balance fixed cost and variable cost to determine goodness?
+        # TODO - Implementation should strongly discount the probability of taking backtracks (unless its the only option)
+        # TODO - Implementation should strongly discount the probability of opposite edges with high pheromone
+        # TODO - Implementation should strongly credit the
+        """
+        # CODE SNIPPET FOR A TRULY RANDOM WALK OF THE GRAPH
         random.seed()
         arcChoice = random.choice(options)
         return arcChoice
+        """
+        # TODO - This is a roulette wheel style selection, which may need updating (Currently based on the concave cost NFP paper)
+        random.seed()
+        # Compute numerators and denominators
+        numerators = []
+        denominator = 0.0
+        for arc in options:
+            thisArcsNumerator = (self.pheromoneDict[arc] ** self.alpha) * (self.goodnessDict[arc] ** self.beta)
+            numerators.append(thisArcsNumerator)
+            denominator += thisArcsNumerator
+        cumulativeProbabilities = [numerators[0] / denominator]
+        for i in range(1, len(numerators)):
+            cumulativeProbabilities.append((numerators[i] / denominator) + cumulativeProbabilities[i - 1])
+        rng = random.random()
+        for arc in range(len(options)):
+            if rng < cumulativeProbabilities[arc]:
+                return options[arc]
 
     def travelArc(self, arcChoice: tuple) -> None:
         """Moves the ant across the arc, assigning flow as it goes"""
@@ -180,6 +217,65 @@ class Ant:
         """Resets the trip attributes after going back to the source"""
         self.arcsVisitedThisTrip = set()
         self.tripStack = []
+
+    def resetTourAndSolutionAttributes(self) -> None:
+        """Resets the solution/tour attributes after finding a complete solution"""
+        # Reset tour attributes
+        self.time = 0
+        self.numTrips = 0
+        self.currentPosition = -1
+        self.remainingFlowToAssign = self.minTargetFlow
+        self.flowCarriedOnCurrentTrip = 0.0
+        self.flowDeliveredToSinks = 0.0
+        self.arcsTraveled = self.initializeArcsTravelFlowAssignDict()
+        self.assignedFlowDict = self.initializeArcsTravelFlowAssignDict()
+        self.availableCapacity = self.initializeAvailableCapacityDict()
+        # Reset solution attributes
+        self.trueCost = 0.0
+        self.sourceFlows = []
+        self.sinkFlows = []
+        self.arcFlows = {}
+        self.arcsOpened = {}
+
+    def computeResultingNetwork(self) -> None:
+        """Calculates the cost of the ant's solution"""
+        trueCost = 0.0
+        # Calculate source costs
+        for sourceIndex in range(self.network.numSources):
+            sourceID = self.network.sourcesArray[sourceIndex]
+            sourceCapacity = self.network.sourceCapsArray[sourceIndex]
+            sourceFlow = self.assignedFlowDict[(-1, sourceID, sourceCapacity)]
+            self.sourceFlows.append(sourceFlow)
+            sourceVariableCost = self.network.sourceVariableCostsArray[sourceIndex]
+            trueCost += sourceVariableCost * sourceFlow
+        # Calculate sink costs
+        for sinkIndex in range(self.network.numSinks):
+            sinkID = self.network.sinksArray[sinkIndex]
+            sinkCapacity = self.network.sinkCapsArray[sinkIndex]
+            sinkFlow = self.assignedFlowDict[(sinkID, -2, sinkCapacity)]
+            self.sinkFlows.append(sinkFlow)
+            sinkVariableCost = self.network.sinkVariableCostsArray[sinkIndex]
+            trueCost += sinkVariableCost * sinkFlow
+        # Calculate edge costs
+        for edgeIndex in range(self.network.numEdges):
+            for capIndex in range(self.network.numArcCaps):
+                edge = self.network.edgesArray[edgeIndex]
+                cap = self.network.possibleArcCapsArray[capIndex]
+                arcObj = self.network.arcsDict[(edge[0], edge[1], cap)]
+                arcFlow = self.assignedFlowDict[(edge[0], edge[1], cap)]
+                self.arcFlows[(edgeIndex, capIndex)] = arcFlow
+                self.arcsOpened[(edgeIndex, capIndex)] = 0
+                if arcFlow > 0:
+                    trueCost += arcObj.fixedCost + arcObj.variableCost * arcFlow
+                    self.arcsOpened[(edgeIndex, capIndex)] = 1
+        self.trueCost = trueCost
+
+    def writeSolution(self) -> Solution:
+        """Writes the single ant's solution to a Solution instance for visualization/saving"""
+        solution = Solution(self.network, self.minTargetFlow, self.trueCost, self.trueCost, self.sourceFlows,
+                            self.sinkFlows, self.arcFlows, self.arcsOpened, "Ant", False,
+                            self.network.isSourceSinkCapacitated, self.network.isSourceSinkCharged)
+        return solution
 
     def printTripData(self) -> None:
         """Prints the data at each time step"""
