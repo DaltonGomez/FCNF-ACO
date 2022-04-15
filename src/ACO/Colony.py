@@ -10,3 +10,4 @@ class Colony:
     def __init__(self, network: FlowNetwork, minTargetFlow: float):
         """Constructor of a Colony instance"""
         self.network = network
+        self.minTargetFlow = minTargetFlow
