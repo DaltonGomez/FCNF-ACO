@@ -1,9 +1,10 @@
-from src.ACO.Colony import Colony
+from src.ACO.Ant import Ant
 from src.Network.FlowNetwork import FlowNetwork
 
-networkFile = "smallTest.p"
+networkFile = "basic.p"
 
 network = FlowNetwork()
 network = network.loadNetwork(networkFile)
 
-antColony = Colony(network, 100)
+singleAnt = Ant(network, 20.0)
+singleAnt.findSolution()
