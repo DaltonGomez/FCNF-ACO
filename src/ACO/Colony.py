@@ -21,10 +21,10 @@ class Colony:
         # Hyperparameters
         self.numEpisodes = numEpisodes  # One episode = All the ants completing one tour (i.e. creating a valid solution) each
         self.numAnts = numAnts  # Number of tours completed per episode
-        self.evaporationRate = 0.25  # rho = Rate at which pheromone is lost (NOTE: 1 = complete loss/episode; 0 = no loss/episode)
+        self.evaporationRate = 0.50  # rho = Rate at which pheromone is lost (NOTE: 1 = complete loss/episode; 0 = no loss/episode)
         self.alpha = 1  # alpha = Relative importance to the ant of pheromone over "goodness" of arc
         self.beta = 1  # beta = Relative importance to the ant of "goodness" of arc over pheromone
-        self.Q = 2  # Q = Proportionality scalar of best solution, which scales how much pheromone the best solution deposits
+        self.Q = 5  # Q = Proportionality scalar of best solution, which scales how much pheromone the best solution deposits
 
         # Colony Attributes
         self.population = self.initializePopulation()  # Contains the population of ants
@@ -38,16 +38,20 @@ class Colony:
         """Main loop that solves the Flow Network instance with the ACO"""
         # EPISODE LOOP
         for episode in range(self.numEpisodes):
+            print("\nStarting Episode " + str(episode) + "...")
             # INDIVIDUAL ANT EXPLORATION LOOP
-            for ant in self.population:
-                ant.findSolution(self.pheromoneDict, self.goodnessDict)  # In series, each ant solves individually
+            for antIndex in range(self.numAnts):
+                print("Solving ant " + str(antIndex) + "...")
+                self.population[antIndex].findSolution(self.pheromoneDict,
+                                                       self.goodnessDict)  # In series, each ant solves individually
             # POST-EXPLORATION DAEMON UPDATES
+            print("Doing post-exploration updates...")
             self.updateBestSolution()  # Updates the best solution only if this population contains it
             self.evaporatePheromone()  # Reduces the pheromone across the entire dictionary based on rho
             self.depositPheromone()  # Deposits new pheromone on the arcs in the best known solution
             self.resetAllAnts()  # Clears the tour/solution attributes of every ant in the population for the next episode
             self.visual = SolutionVisualizer(self.bestKnownSolution)  # Instantiate a visualizer
-            self.visual.drawGraphWithLabels()  # Draw graph
+            self.visual.drawGraphWithLabels(leadingText="Ep." + str(episode) + "_")  # Draw graph
         return self.bestKnownSolution  # Should return the best solution found at the end
 
     def updateBestSolution(self) -> None:

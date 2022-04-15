@@ -16,6 +16,8 @@ class Ant:
         # Input Attributes
         self.network = network  # Input network data
         self.minTargetFlow = minTargetFlow  # Target flow to assign
+        self.pheromoneDict = {}  # Dictionary indexed on key (fromNode, toNode, cap) with value (pheromone deposited in previous episodes)
+        self.goodnessDict = {}  # Dictionary indexed on key (fromNode, toNode, cap) with value (eta) (i.e. the "goodness" of taking that arc)
 
         # Hyperparameters
         self.flowCarriedPerTrip = 20.0  # The size of the ant's "backpack"
@@ -112,14 +114,10 @@ class Ant:
         # TODO - Determine a "goodness of arc" function... How will we balance fixed cost and variable cost to determine goodness?
         # TODO - Implementation should strongly discount the probability of taking backtracks (unless its the only option)
         # TODO - Implementation should strongly discount the probability of opposite edges with high pheromone
-        # TODO - Implementation should strongly credit the
-        """
-        # CODE SNIPPET FOR A TRULY RANDOM WALK OF THE GRAPH
-        random.seed()
-        arcChoice = random.choice(options)
-        return arcChoice
-        """
-        # TODO - This is a roulette wheel style selection, which may need updating (Currently based on the concave cost NFP paper)
+        # TODO - Implementation should strongly credit neighboring arcs that are close to capacity (i.e. if you paid for an edge, might as well use all of it)
+        # BUG CAUSES DEADLOCK ON FIRST ANT'S FIRST DECISION OF THE SECOND EPISODE!!!
+        # TODO - This is a roulette wheel style selection, which needs updating (Currently based on the concave cost NFP paper)
+        # TODO - DEFINITELY NEEDS UPDATING VIA A NORMALIZATION OF THE CUMULATIVE PROBABILITIES AS NOW THE ANT JUST GETS STUCK ON 2ND EPISODE BECAUSE IT CAN'T CHOOSE AN EDGE
         random.seed()
         # Compute numerators and denominators
         numerators = []
@@ -132,9 +130,17 @@ class Ant:
         for i in range(1, len(numerators)):
             cumulativeProbabilities.append((numerators[i] / denominator) + cumulativeProbabilities[i - 1])
         rng = random.random()
+        print(rng)  # PRINTS FOR DEBUGGING - SHOWS DEADLOCK WHERE ANT CANNOT MAKE A CHOICE!
+        print(cumulativeProbabilities)
         for arc in range(len(options)):
             if rng < cumulativeProbabilities[arc]:
                 return options[arc]
+        """
+        # CODE SNIPPET FOR A TRULY RANDOM WALK OF THE GRAPH
+        random.seed()
+        arcChoice = random.choice(options)
+        return arcChoice
+        """
 
     def travelArc(self, arcChoice: tuple) -> None:
         """Moves the ant across the arc, assigning flow as it goes"""
@@ -225,7 +231,7 @@ class Ant:
         self.numTrips = 0
         self.currentPosition = -1
         self.remainingFlowToAssign = self.minTargetFlow
-        self.flowCarriedOnCurrentTrip = 0.0
+        self.flowCarriedOnCurrentTrip = self.flowCarriedPerTrip
         self.flowDeliveredToSinks = 0.0
         self.arcsTraveled = self.initializeArcsTravelFlowAssignDict()
         self.assignedFlowDict = self.initializeArcsTravelFlowAssignDict()
