@@ -39,14 +39,14 @@ class Colony:
         """Main loop that solves the Flow Network instance with the ACO"""
         # EPISODE LOOP
         for episode in range(self.numEpisodes):
-            print("\nStarting Episode " + str(episode) + "...")
+            # print("\nStarting Episode " + str(episode) + "...")  # PRINT OPTION
             # INDIVIDUAL ANT EXPLORATION LOOP
             for antIndex in range(self.numAnts):
-                print("Solving ant " + str(antIndex) + "...")
+                # print("Solving ant " + str(antIndex) + "...")  # PRINT OPTION
                 # In series, solve each ant one at a time
                 self.population[antIndex].findSolution(self.pheromoneDict, self.goodnessDict)
             # POST-EXPLORATION DAEMON UPDATES
-            print("Doing post-exploration updates...")
+            # print("Doing post-exploration updates...")  # PRINT OPTION
             self.updateBestSolution()  # Updates the best solution only if this population contains it
             self.evaporatePheromone()  # Reduces the pheromone across the entire dictionary based on rho
             self.depositPheromone()  # Deposits new pheromone on the arcs in the best known solution

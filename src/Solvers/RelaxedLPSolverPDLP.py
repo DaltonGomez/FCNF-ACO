@@ -155,7 +155,7 @@ class RelaxedLPSolverPDLP:
         if self.isRun is False:
             print("You must run the solver before building a solution!")
         elif self.status == pywraplp.Solver.OPTIMAL:
-            print("Building solution...")
+            # print("Building solution...")  # PRINT OPTION
             objValue = self.solver.Objective().Value()
             srcFlows = self.getSrcFlowsList()
             sinkFlows = self.getSinkFlowsList()
@@ -165,7 +165,7 @@ class RelaxedLPSolverPDLP:
             thisSolution = Solution(self.network, self.minTargetFlow, objValue, self.trueCost, srcFlows, sinkFlows,
                                     arcFlows,
                                     arcsOpen, "gor_PDLP", False, self.isSrcSinkConstrained, self.isSrcSinkCharged)
-            print("Solution built!")
+            # print("Solution built!")  # PRINT OPTION
             return thisSolution
         else:
             print("No feasible solution exists!")

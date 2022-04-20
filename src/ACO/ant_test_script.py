@@ -10,26 +10,30 @@ from src.Solvers.RelaxedLPSolverPDLP import RelaxedLPSolverPDLP
 networkFile = "medium.p"
 network = FlowNetwork()
 network = network.loadNetwork(networkFile)
-targetFlow = 600
+targetFlow = 1000
 
 # Test Colony
 antColony = Colony(network, targetFlow, 25, 25)
-antSoln = antColony.solveNetwork(drawing=True)
+antSoln = antColony.solveNetwork(drawing=False)
 antSoln.saveSolution()
+antVisualizer = SolutionVisualizer(antSoln)
+antVisualizer.drawUnlabeledGraph()
 
 # Solve Exactly
 milpSolver = MILPsolverCPLEX(network, targetFlow, isOneArcPerEdge=False)
 milpSolver.buildModel()
 milpSolver.solveModel()
+milpSolver.printSolverOverview()
 exactSoln = milpSolver.writeSolution()
 exactVisualizer = SolutionVisualizer(exactSoln)
-exactVisualizer.drawGraphWithLabels()
+exactVisualizer.drawUnlabeledGraph()
 
 # Solve with Naive LP Relaxation
 lpSolver = RelaxedLPSolverPDLP(network, targetFlow)
 alphaValues = np.full((network.numEdges, network.numArcCaps), 1.0)
 lpSolver.updateObjectiveFunction(alphaValues)
 lpSolver.solveModel()
+lpSolver.printSolverOverview()
 relaxedSoln = lpSolver.writeSolution()
 relaxedVisualizer = SolutionVisualizer(relaxedSoln)
-relaxedVisualizer.drawGraphWithLabels()
+relaxedVisualizer.drawUnlabeledGraph()

@@ -64,7 +64,7 @@ class Ant:
             self.numTrips += 1  # Increment trips
             # self.printTripData()  # PRINT OPTION
         self.computeResultingNetwork()  # Calculates the cost and data structures for writing to a solution object
-        print("Solution Cost = " + str(self.trueCost) + "\n")
+        # print("Solution Cost = " + str(self.trueCost) + "\n")  # PRINT OPTION
 
     def getPossibleNextMoves(self) -> list:
         """Returns the possible options the ant could take on their next timestep"""
@@ -110,16 +110,13 @@ class Ant:
             thisArcsNumerator = (self.pheromoneDict[arc] ** self.alpha) * (self.goodnessDict[arc] ** self.beta)
             numerators.append(thisArcsNumerator)
             denominator += thisArcsNumerator
-        print(options)
-        print(numerators)
-        print(denominator)
         # Build cumulative probability distribution
         cumulativeProbabilities = [numerators[0] / denominator]
         for i in range(1, len(numerators)):
             cumulativeProbabilities.append((numerators[i] / denominator) + cumulativeProbabilities[i - 1])
         # Roll RNG and select edge
         rng = random.random()
-        self.printProbabilityDistribution(rng, options, cumulativeProbabilities)  # PRINT OPTION
+        # self.printProbabilityDistribution(rng, options, cumulativeProbabilities)  # PRINT OPTION
         for arc in range(len(options)):
             if rng < cumulativeProbabilities[arc]:
                 return options[arc]
