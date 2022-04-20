@@ -57,12 +57,12 @@ class Ant:
             while self.currentPosition != -2:  # Explore until the supersink is found
                 options = self.getPossibleNextMoves()  # Get options for next move by checking non-full adjacent edges
                 arcChoice = self.decideArcToTraverse(options)  # Probabilistically choose a next arc
-                self.printTimeStepData(arcChoice)  # PRINT OPTION
+                # self.printTimeStepData(arcChoice)  # PRINT OPTION
                 self.travelArc(arcChoice)  # Move the ant across the arc and assign flow
             # POST-TRIP ACCOUNTING
             self.assignTripFlow()  # Assigns flow to all arcs traveled in the trip, where the amount is equal to the minimum available capacity seen
             self.numTrips += 1  # Increment trips
-            self.printTripData()  # PRINT OPTION
+            # self.printTripData()  # PRINT OPTION
         self.computeResultingNetwork()  # Calculates the cost and data structures for writing to a solution object
         print("Solution Cost = " + str(self.trueCost) + "\n")
 
@@ -100,6 +100,9 @@ class Ant:
     def decideArcToTraverse(self, options: list) -> tuple:
         """Probabilistically selects the arc the ant will travel on the next timestep"""
         random.seed()
+        # Check if the only option is to move back to the supersource, and if so, return that option
+        if len(options) == 1 and options[0][1] == -1:
+            return options[0]
         # Compute numerators and denominators
         numerators = []
         denominator = 0.0
@@ -107,9 +110,14 @@ class Ant:
             thisArcsNumerator = (self.pheromoneDict[arc] ** self.alpha) * (self.goodnessDict[arc] ** self.beta)
             numerators.append(thisArcsNumerator)
             denominator += thisArcsNumerator
+        print(options)
+        print(numerators)
+        print(denominator)
+        # Build cumulative probability distribution
         cumulativeProbabilities = [numerators[0] / denominator]
         for i in range(1, len(numerators)):
             cumulativeProbabilities.append((numerators[i] / denominator) + cumulativeProbabilities[i - 1])
+        # Roll RNG and select edge
         rng = random.random()
         self.printProbabilityDistribution(rng, options, cumulativeProbabilities)  # PRINT OPTION
         for arc in range(len(options)):
