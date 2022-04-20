@@ -20,9 +20,6 @@ class Ant:
         self.goodnessDict = {}  # Dictionary indexed on key (fromNode, toNode, cap) with value (eta) (i.e. the "goodness" of taking that arc)
 
         # Hyperparameters
-        self.flowCarriedPerTrip = 20.0  # The size of the ant's "backpack"
-        # TODO - Update/improve so that this is dynamic throughout a tour/trip
-        # TODO - As it stands, this implementation (i.e. fixed backpack size always filled) cannot handle anything but target flows that are a multiple of the backpack size
         self.alpha = alpha  # alpha = Relative importance to the ant of pheromone over "goodness" of arc
         self.beta = beta  # beta = Relative importance to the ant of "goodness" of arc over pheromone
 
@@ -32,17 +29,13 @@ class Ant:
         self.numTrips = 0  # Number of trips the ant has taken
         self.currentPosition = -1  # Node ID of the ant's position- NOTE: -1 Represents the supersource and -2 represents the supersink
         self.remainingFlowToAssign = self.minTargetFlow  # "Mountain" of flow initially at the supersource that the ant has to move
-        self.flowCarriedOnCurrentTrip = 0.0  # Amount of flow in the ant's "backpack" on any given trip
-        self.flowDeliveredToSinks = 0.0  # "Mountain" of flow built up over multiple trips until the tour is complete
-        self.arcsTraveled = self.initializeArcsTravelFlowAssignDict()  # Dictionary indexed on key (fromNode, toNode, cap) with value (# of times traversed)
-        self.assignedFlowDict = self.initializeArcsTravelFlowAssignDict()  # Dictionary indexed on key (fromNode, toNode, cap) with value (cumulative flow assigned)
-        self.availableCapacity = self.initializeAvailableCapacityDict()  # Dictionary indexed on key (fromNode, toNode, cap) with value (available capacity until full)
+        self.assignedFlowDict = self.initializeAssignedFlowDict()  # Dictionary indexed on key (fromNode, toNode, cap) with value (cumulative flow assigned)
+        self.availableCapacityDict = self.initializeAvailableCapacityDict()  # Dictionary indexed on key (fromNode, toNode, cap) with value (available capacity until full)
 
         # Trip Attributes
         # NOTE: A "trip" is a single supersource -> supersink path that assigns only x amount of flow
-        self.tripStack = []  # Maintains the arcs traveled on the current trip (NOTE: Should be treated as a true stack- push/pop only!
-        self.arcsVisitedThisTrip = set()  # Maintains a set to prevent taking the same arc twice
-        # TODO - Originally the arcsVisited data structure was to prevent cycles, while it prevents continuously going back and forth, it does not prevent cycles but can cause deadlock
+        self.tripStack = []  # Maintains the arcs traveled on the current trip (NOTE: Should be treated as a true stack- push/pop only!)
+        self.nodesVisitedThisTrip = set()  # Ant's memory of visited nodes this trip (Used for cycle/backtracking detection)
 
         # Solution Attributes (Written after an ant completes a tour)
         self.trueCost = 0.0
@@ -60,21 +53,18 @@ class Ant:
         while self.remainingFlowToAssign > 0.0:  # While all flow is not delivered
             # PRE-TRIP SETUP
             self.resetTripAttributes()  # Start a new trip
-            self.currentPosition = -1  # Reset to supersource
-            self.flowCarriedOnCurrentTrip = self.flowCarriedPerTrip  # Take flow from mountain and put in backpack
             # TRIP LOOP
             while self.currentPosition != -2:  # Explore until the supersink is found
                 options = self.getPossibleNextMoves()  # Get options for next move by checking non-full adjacent edges
                 arcChoice = self.decideArcToTraverse(options)  # Probabilistically choose a next arc
-                self.printTimeStepData(arcChoice)  # Print action for debugging/QA
+                self.printTimeStepData(arcChoice)  # PRINT OPTION
                 self.travelArc(arcChoice)  # Move the ant across the arc and assign flow
             # POST-TRIP ACCOUNTING
-            self.remainingFlowToAssign -= self.flowCarriedOnCurrentTrip  # Deduct remaining flow from "mountain"
-            self.flowDeliveredToSinks += self.flowCarriedOnCurrentTrip  # Deposit flow in supersink
+            self.assignTripFlow()  # Assigns flow to all arcs traveled in the trip, where the amount is equal to the minimum available capacity seen
             self.numTrips += 1  # Increment trips
-            self.printTripData()  # Print trip for debugging/QA
+            self.printTripData()  # PRINT OPTION
         self.computeResultingNetwork()  # Calculates the cost and data structures for writing to a solution object
-        # print("Solution Cost = " + str(self.trueCost))
+        print("Solution Cost = " + str(self.trueCost) + "\n")
 
     def getPossibleNextMoves(self) -> list:
         """Returns the possible options the ant could take on their next timestep"""
@@ -85,8 +75,7 @@ class Ant:
                 source = self.network.sourcesArray[srcIndex]
                 cap = self.network.sourceCapsArray[srcIndex]
                 arcID = (-1, source, cap)
-                # Previous is was: if self.availableCapacity[arcID] > 0.0 and arcID not in self.arcsVisitedThisTrip:
-                if self.availableCapacity[arcID] > 0.0:
+                if self.availableCapacityDict[arcID] > 0.0:
                     options.append((-1, source, cap))
         # Evaluate options if you're anywhere else
         else:
@@ -96,7 +85,7 @@ class Ant:
                 for cap in self.network.possibleArcCapsArray:
                     arcID = (edge[0], edge[1], cap)
                     # Previous is was: if self.availableCapacity[arcID] > 0.0 and arcID not in self.arcsVisitedThisTrip:
-                    if self.availableCapacity[arcID] > 0.0:
+                    if self.availableCapacityDict[arcID] > 0.0:
                         options.append((edge[0], edge[1], cap))
             # Give the possibility to go back to the supersource if at a source
             if nodeObj.nodeType == 0:
@@ -110,14 +99,6 @@ class Ant:
 
     def decideArcToTraverse(self, options: list) -> tuple:
         """Probabilistically selects the arc the ant will travel on the next timestep"""
-        # TODO - Implement based on pheromone/goodness of arc... Currently doing the roulette wheel from the concave cost NFP paper
-        # TODO - Determine a "goodness of arc" function... How will we balance fixed cost and variable cost to determine goodness?
-        # TODO - Implementation should strongly discount the probability of taking backtracks (unless its the only option)
-        # TODO - Implementation should strongly discount the probability of opposite edges with high pheromone
-        # TODO - Implementation should strongly credit neighboring arcs that are close to capacity (i.e. if you paid for an edge, might as well use all of it)
-        # BUG CAUSES DEADLOCK ON FIRST ANT'S FIRST DECISION OF THE SECOND EPISODE!!!
-        # TODO - This is a roulette wheel style selection, which needs updating (Currently based on the concave cost NFP paper)
-        # TODO - DEFINITELY NEEDS UPDATING VIA A NORMALIZATION OF THE CUMULATIVE PROBABILITIES AS NOW THE ANT JUST GETS STUCK ON 2ND EPISODE BECAUSE IT CAN'T CHOOSE AN EDGE
         random.seed()
         # Compute numerators and denominators
         numerators = []
@@ -130,55 +111,45 @@ class Ant:
         for i in range(1, len(numerators)):
             cumulativeProbabilities.append((numerators[i] / denominator) + cumulativeProbabilities[i - 1])
         rng = random.random()
-        print(rng)  # PRINTS FOR DEBUGGING - SHOWS DEADLOCK WHERE ANT CANNOT MAKE A CHOICE!
-        print(options)
-        print(cumulativeProbabilities)
+        self.printProbabilityDistribution(rng, options, cumulativeProbabilities)  # PRINT OPTION
         for arc in range(len(options)):
             if rng < cumulativeProbabilities[arc]:
                 return options[arc]
-        """
-        # CODE SNIPPET FOR A TRULY RANDOM WALK OF THE GRAPH
-        random.seed()
-        arcChoice = random.choice(options)
-        return arcChoice
-        """
 
     def travelArc(self, arcChoice: tuple) -> None:
-        """Moves the ant across the arc, assigning flow as it goes"""
+        """Moves the ant across an arc, using the ant's memory to detect and undo cycles and backtracks"""
+        self.time += 1  # Increment the timestep
         # If the move is a back track, then undo the flow assigned on the last step
-        if self.isBackTrack(arcChoice) is True:
-            self.time += 1  # Increment the timestep
-            backArc = self.tripStack.pop(
-                -1)  # Pop previous move off trip stack (i.e. get the opposite edge to this one)
-            self.currentPosition = arcChoice[1]  # Update position (i.e. move across arc)
-            self.assignedFlowDict[
-                backArc] -= self.flowCarriedOnCurrentTrip  # Deduct previously assigned flow on opposite arc
-            self.availableCapacity[backArc] += self.flowCarriedOnCurrentTrip  # Add flow back to available capacity
-            self.arcsTraveled[backArc] -= 1  # Don't count a back tracked arc in the final solution
-            self.arcsVisitedThisTrip.add(arcChoice)  # Add to arcs visited this trip set
+        if self.isVisitedNode(arcChoice) is True:
+            while self.tripStack[-1][1] != arcChoice[1]:
+                poppedPrevMove = self.tripStack.pop(-1)  # Pop previous move off trip stack
+                self.currentPosition = poppedPrevMove[0]  # Update position by undoing popped move
+                self.nodesVisitedThisTrip.remove(poppedPrevMove[1])  # Remove the popped nodes from the ant's memory
         else:
-            self.time += 1  # Increment the timestep
             self.currentPosition = arcChoice[1]  # Update position (i.e. move across arc)
-            self.assignedFlowDict[
-                arcChoice] += self.flowCarriedOnCurrentTrip  # Assign carried flow to whatever has already been assigned
-            # TODO - What if deducting the flow makes it go negative? Only take what you can and propagate the reduced flow back through the path?
-            self.availableCapacity[arcChoice] -= self.flowCarriedOnCurrentTrip  # Deduct flow from available capacity
-            self.arcsTraveled[arcChoice] += 1  # Increment this arc's entry in number of times visited
+            self.nodesVisitedThisTrip.add(arcChoice[1])  # Adds the node to the ant's memory of nodes this trip
             self.tripStack.append(arcChoice)  # Push the move onto the trip stack
-            self.arcsVisitedThisTrip.add(arcChoice)  # Add to arcs visited this trip set
 
-    def isBackTrack(self, arcChoice: tuple) -> bool:
-        """Peeks at the top of the trip stack and returns true if the current move undoes the last"""
-        # Make sure there is a trip history (i.e. not at the supersource)
-        if len(self.tripStack) == 0:
-            return False
+    def isVisitedNode(self, arcChoice: tuple) -> bool:
+        """Checks the set of already visited nodes to identify cycles/backtracks"""
+        if arcChoice[1] in self.nodesVisitedThisTrip:
+            return True
         else:
-            tripStackPeek = self.tripStack[-1]
-            # If now's toNode is last's fromNode and last's fromNode is now's toNode
-            if arcChoice[0] == tripStackPeek[1] and arcChoice[1] == tripStackPeek[0]:
-                return True
-            else:
-                return False
+            return False
+
+    def assignTripFlow(self) -> None:
+        """Assigns flow to all arcs traveled, where the amount is the minimum available capacity seen on the trip"""
+        # Get bottleneck size (i.e. minimum available capacity over all arcs visited on trip)
+        minAvailableCapacityDuringTrip = self.remainingFlowToAssign  # Start the flow to assign at the remaining amount
+        for arc in self.tripStack:
+            if self.availableCapacityDict[arc] < minAvailableCapacityDuringTrip:
+                minAvailableCapacityDuringTrip = self.availableCapacityDict[arc]
+        # Iterate over arcs, assigning flow and deducting from the minimum available capacity
+        for arc in self.tripStack:
+            self.availableCapacityDict[arc] -= minAvailableCapacityDuringTrip
+            self.assignedFlowDict[arc] += minAvailableCapacityDuringTrip
+        # Deduct assigned flow from the flow left to assign
+        self.remainingFlowToAssign -= minAvailableCapacityDuringTrip
 
     def computeResultingNetwork(self) -> None:
         """Calculates the cost of the ant's solution"""
@@ -188,7 +159,7 @@ class Ant:
             sourceID = self.network.sourcesArray[sourceIndex]
             sourceCapacity = self.network.sourceCapsArray[sourceIndex]
             sourceFlow = self.assignedFlowDict[(-1, sourceID, sourceCapacity)]
-            self.sourceFlows.append(sourceFlow)
+            self.sourceFlows.append(int(sourceFlow))
             sourceVariableCost = self.network.sourceVariableCostsArray[sourceIndex]
             trueCost += sourceVariableCost * sourceFlow
         # Calculate sink costs
@@ -196,7 +167,7 @@ class Ant:
             sinkID = self.network.sinksArray[sinkIndex]
             sinkCapacity = self.network.sinkCapsArray[sinkIndex]
             sinkFlow = self.assignedFlowDict[(sinkID, -2, sinkCapacity)]
-            self.sinkFlows.append(sinkFlow)
+            self.sinkFlows.append(int(sinkFlow))
             sinkVariableCost = self.network.sinkVariableCostsArray[sinkIndex]
             trueCost += sinkVariableCost * sinkFlow
         # Calculate edge costs
@@ -206,14 +177,12 @@ class Ant:
                 cap = self.network.possibleArcCapsArray[capIndex]
                 arcObj = self.network.arcsDict[(edge[0], edge[1], cap)]
                 arcFlow = self.assignedFlowDict[(edge[0], edge[1], cap)]
-                self.arcFlows[(edgeIndex, capIndex)] = arcFlow
+                self.arcFlows[(edgeIndex, capIndex)] = int(arcFlow)
                 self.arcsOpened[(edgeIndex, capIndex)] = 0
                 if arcFlow > 0:
                     trueCost += arcObj.fixedCost + arcObj.variableCost * arcFlow
                     self.arcsOpened[(edgeIndex, capIndex)] = 1
         self.trueCost = trueCost
-
-    # TODO - Add in a post-processing technique to reduce edges with bidirectional flow and to identify and eliminate cycles
 
     def writeSolution(self) -> Solution:
         """Writes the single ant's solution to a Solution instance for visualization/saving"""
@@ -222,8 +191,8 @@ class Ant:
                             self.network.isSourceSinkCapacitated, self.network.isSourceSinkCharged)
         return solution
 
-    def initializeArcsTravelFlowAssignDict(self) -> dict:
-        """Adds all possible arcs and supersource/sink as keys to the assigned flow/arcs traveled dictionaries with a value of zero"""
+    def initializeAssignedFlowDict(self) -> dict:
+        """Adds all possible arcs and supersource/sink as keys to the assigned flow dictionary with a value of zero"""
         assignedFlowDict = {}
         # For all edge, cap pairs, initialize with zero
         for edge in self.network.edgesArray:
@@ -264,21 +233,20 @@ class Ant:
 
     def resetTripAttributes(self) -> None:
         """Resets the trip attributes after going back to the source"""
-        self.arcsVisitedThisTrip = set()
+        self.currentPosition = -1
         self.tripStack = []
+        self.nodesVisitedThisTrip = set()
 
     def resetTourAndSolutionAttributes(self) -> None:
         """Resets the solution/tour attributes after finding a complete solution"""
+        # Reset trip attributes
+        self.resetTripAttributes()
         # Reset tour attributes
         self.time = 0
         self.numTrips = 0
-        self.currentPosition = -1
         self.remainingFlowToAssign = self.minTargetFlow
-        self.flowCarriedOnCurrentTrip = self.flowCarriedPerTrip
-        self.flowDeliveredToSinks = 0.0
-        self.arcsTraveled = self.initializeArcsTravelFlowAssignDict()
-        self.assignedFlowDict = self.initializeArcsTravelFlowAssignDict()
-        self.availableCapacity = self.initializeAvailableCapacityDict()
+        self.assignedFlowDict = self.initializeAssignedFlowDict()
+        self.availableCapacityDict = self.initializeAvailableCapacityDict()
         # Reset solution attributes
         self.trueCost = 0.0
         self.sourceFlows = []
@@ -299,6 +267,17 @@ class Ant:
         print("Time = " + str(self.time))
         print("Prev. Node = " + str(arcChoice[0]))
         print("Current Node = " + str(arcChoice[1]))
-        print("Is Backtrack? " + str(self.isBackTrack(arcChoice)))
+        print("Is Visited Node? " + str(self.isVisitedNode(arcChoice)))
         print("Trip Stack:")
         print(str(self.tripStack))
+
+    @staticmethod
+    def printProbabilityDistribution(rng: float, options: list, cumulativeProbabilities: list) -> None:
+        """Prints the cumulative probability distribution generated when an ant considers which edge to chose"""
+        percents = []
+        for prob in cumulativeProbabilities:
+            percent = round(prob * 100, 2)
+            percents.append(str(percent) + "%")
+        print("RNG = " + str(round(rng * 100, 3)) + "%")
+        print("OPTIONS = " + str(options))
+        print("CDF = " + str(percents))

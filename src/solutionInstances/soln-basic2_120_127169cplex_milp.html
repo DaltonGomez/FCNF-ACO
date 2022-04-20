@@ -46,70 +46,90 @@
 
         // parsing and collecting nodes and edges from the python
         nodes = new vis.DataSet([{
+            "color": "blue",
+            "id": 3,
+            "label": 3,
+            "shape": "dot",
+            "value": 120.0,
+            "x": 702,
+            "y": 403
+        }, {"color": "red", "id": 1, "label": 1, "shape": "dot", "value": 120.0, "x": 32, "y": 331}, {
             "color": "black",
             "id": 0,
             "label": 0,
             "shape": "dot",
+            "value": 20.0,
             "x": 502,
             "y": 498
-        }, {"color": "red", "id": 1, "label": 1, "shape": "dot", "x": 32, "y": 331}, {
+        }, {
             "color": "black",
             "id": 2,
             "label": 2,
             "shape": "dot",
+            "value": 20.0,
             "x": 140,
             "y": 490
-        }, {"color": "blue", "id": 3, "label": 3, "shape": "dot", "x": 702, "y": 403}, {
-            "color": "black",
-            "id": 4,
-            "label": 4,
-            "shape": "dot",
-            "x": 308,
-            "y": 69
-        }]);
-        edges = new vis.DataSet([{"arrows": "to", "color": "black", "from": 2, "label": 0, "to": 4}, {
+        }, {"color": "black", "id": 4, "label": 4, "shape": "dot", "value": 100.0, "x": 308, "y": 69}]);
+        edges = new vis.DataSet([{
             "arrows": "to",
-            "color": "black",
+            "color": "rgba(155, 155, 155, 0.35)",
+            "from": 2,
+            "to": 4,
+            "value": 0
+        }, {"arrows": "to", "color": "rgba(155, 155, 155, 0.35)", "from": 4, "to": 2, "value": 0}, {
+            "arrows": "to",
+            "color": "rgba(155, 155, 155, 0.35)",
             "from": 4,
-            "label": 1,
-            "to": 0
-        }, {"arrows": "to", "color": "black", "from": 0, "label": 2, "to": 4}, {
+            "to": 0,
+            "value": 0
+        }, {"arrows": "to", "color": "rgba(155, 155, 155, 0.35)", "from": 0, "to": 4, "value": 0}, {
+            "arrows": "to",
+            "color": "rgba(155, 155, 155, 0.35)",
+            "from": 0,
+            "to": 4,
+            "value": 0
+        }, {"arrows": "to", "color": "rgba(155, 155, 155, 0.35)", "from": 4, "to": 0, "value": 0}, {
             "arrows": "to",
             "color": "black",
             "from": 3,
-            "label": 3,
-            "to": 4
-        }, {"arrows": "to", "color": "black", "from": 1, "label": 4, "to": 2}, {
+            "label": 100,
+            "to": 4,
+            "value": 100.0
+        }, {"arrows": "to", "color": "black", "from": 2, "label": 20, "to": 1, "value": 20.0}, {
             "arrows": "to",
             "color": "black",
+            "from": 3,
+            "label": 100,
+            "to": 4,
+            "value": 100.0
+        }, {"arrows": "to", "color": "black", "from": 2, "label": 20, "to": 1, "value": 20.0}, {
+            "arrows": "to",
+            "color": "black",
+            "from": 3,
+            "label": 20,
+            "to": 0,
+            "value": 20.0
+        }, {"arrows": "to", "color": "black", "from": 0, "label": 20, "to": 2, "value": 20.0}, {
+            "arrows": "to",
+            "color": "rgba(155, 155, 155, 0.35)",
             "from": 4,
-            "label": 5,
-            "to": 3
-        }, {"arrows": "to", "color": "black", "from": 2, "label": 6, "to": 1}, {
+            "to": 2,
+            "value": 0
+        }, {"arrows": "to", "color": "rgba(155, 155, 155, 0.35)", "from": 2, "to": 4, "value": 0}, {
+            "arrows": "to",
+            "color": "black",
+            "from": 3,
+            "label": 20,
+            "to": 0,
+            "value": 20.0
+        }, {"arrows": "to", "color": "black", "from": 4, "label": 100, "to": 1, "value": 100.0}, {
             "arrows": "to",
             "color": "black",
             "from": 0,
-            "label": 7,
-            "to": 3
-        }, {"arrows": "to", "color": "black", "from": 2, "label": 8, "to": 0}, {
-            "arrows": "to",
-            "color": "black",
-            "from": 4,
-            "label": 9,
-            "to": 2
-        }, {"arrows": "to", "color": "black", "from": 3, "label": 10, "to": 0}, {
-            "arrows": "to",
-            "color": "black",
-            "from": 1,
-            "label": 11,
-            "to": 4
-        }, {"arrows": "to", "color": "black", "from": 0, "label": 12, "to": 2}, {
-            "arrows": "to",
-            "color": "black",
-            "from": 4,
-            "label": 13,
-            "to": 1
-        }]);
+            "label": 20,
+            "to": 2,
+            "value": 20.0
+        }, {"arrows": "to", "color": "black", "from": 4, "label": 100, "to": 1, "value": 100.0}]);
 
         // adding nodes and edges to the graph
         data = {nodes: nodes, edges: edges};
@@ -130,11 +150,11 @@
             },
             "edges": {
                 "color": {"inherit": true},
-                "font": {"size": 20, "color": "rgba(235,190,0,1)", "strokeWidth": 3, "strokeColor": "rgba(255,0,0,1)"},
+                "font": {"size": 30, "color": "rgba(235,190,0,1)", "strokeWidth": 3, "strokeColor": "rgba(255,0,0,1)"},
                 "arrowStrikethrough": false,
                 "arrows": {"to": {"scaleFactor": 1}},
                 "scaling": {"min": 2, "max": 16},
-                "smooth": {"enabled": true, "type": "curvedCW", "roundness": 0.1},
+                "smooth": {"enabled": false, "type": "curvedCW", "roundness": 0.1},
                 "shadow": {"enabled": true, "size": 15, "color": "rgba(0,0,0,0.25)"}
             },
             "interaction": {

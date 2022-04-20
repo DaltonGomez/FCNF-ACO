@@ -2,3 +2,4 @@ Network Descriptions
 
 Network Name        # of Nodes      # of Sources        # of Sinks      # of Arc Capacities (i.e. Parallel Edges)
 basic               6               1                   1               1
+basic2              5               1                   1               1

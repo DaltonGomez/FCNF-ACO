@@ -5,7 +5,7 @@ from src.Network.FlowNetwork import FlowNetwork
 from src.Network.Solution import Solution
 
 
-class AlphaSolverPDLP:
+class RelaxedLPSolverPDLP:
     """Class that solves an alpha-relaxed instance approximately via a PDLP gradient descent solver from Google"""
 
     def __init__(self, network: FlowNetwork, minTargetFlow: float, isSrcSinkConstrained=True, isSrcSinkCharged=True):
