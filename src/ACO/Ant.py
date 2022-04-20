@@ -28,7 +28,7 @@ class Ant:
 
         # Tour Attributes
         # NOTE: A "tour" is a complete feasible solution that assigns all target flow across the network in a number of trips
-        self.time = 0  # Kind of for shits and gigs, incremented every time an arc is traveled (i.e. proportional to the search time of all trips
+        self.time = 0  # Incremented every time an arc is traveled (i.e. measure of the total search time for the ant to complete a tour)
         self.numTrips = 0  # Number of trips the ant has taken
         self.currentPosition = -1  # Node ID of the ant's position- NOTE: -1 Represents the supersource and -2 represents the supersink
         self.remainingFlowToAssign = self.minTargetFlow  # "Mountain" of flow initially at the supersource that the ant has to move
@@ -66,13 +66,13 @@ class Ant:
             while self.currentPosition != -2:  # Explore until the supersink is found
                 options = self.getPossibleNextMoves()  # Get options for next move by checking non-full adjacent edges
                 arcChoice = self.decideArcToTraverse(options)  # Probabilistically choose a next arc
-                # self.printTimeStepData(arcChoice)  # Print action for debugging/QA
+                self.printTimeStepData(arcChoice)  # Print action for debugging/QA
                 self.travelArc(arcChoice)  # Move the ant across the arc and assign flow
             # POST-TRIP ACCOUNTING
             self.remainingFlowToAssign -= self.flowCarriedOnCurrentTrip  # Deduct remaining flow from "mountain"
             self.flowDeliveredToSinks += self.flowCarriedOnCurrentTrip  # Deposit flow in supersink
             self.numTrips += 1  # Increment trips
-            # self.printTripData()  # Print trip for debugging/QA
+            self.printTripData()  # Print trip for debugging/QA
         self.computeResultingNetwork()  # Calculates the cost and data structures for writing to a solution object
         # print("Solution Cost = " + str(self.trueCost))
 
@@ -131,6 +131,7 @@ class Ant:
             cumulativeProbabilities.append((numerators[i] / denominator) + cumulativeProbabilities[i - 1])
         rng = random.random()
         print(rng)  # PRINTS FOR DEBUGGING - SHOWS DEADLOCK WHERE ANT CANNOT MAKE A CHOICE!
+        print(options)
         print(cumulativeProbabilities)
         for arc in range(len(options)):
             if rng < cumulativeProbabilities[arc]:
@@ -178,6 +179,48 @@ class Ant:
                 return True
             else:
                 return False
+
+    def computeResultingNetwork(self) -> None:
+        """Calculates the cost of the ant's solution"""
+        trueCost = 0.0
+        # Calculate source costs
+        for sourceIndex in range(self.network.numSources):
+            sourceID = self.network.sourcesArray[sourceIndex]
+            sourceCapacity = self.network.sourceCapsArray[sourceIndex]
+            sourceFlow = self.assignedFlowDict[(-1, sourceID, sourceCapacity)]
+            self.sourceFlows.append(sourceFlow)
+            sourceVariableCost = self.network.sourceVariableCostsArray[sourceIndex]
+            trueCost += sourceVariableCost * sourceFlow
+        # Calculate sink costs
+        for sinkIndex in range(self.network.numSinks):
+            sinkID = self.network.sinksArray[sinkIndex]
+            sinkCapacity = self.network.sinkCapsArray[sinkIndex]
+            sinkFlow = self.assignedFlowDict[(sinkID, -2, sinkCapacity)]
+            self.sinkFlows.append(sinkFlow)
+            sinkVariableCost = self.network.sinkVariableCostsArray[sinkIndex]
+            trueCost += sinkVariableCost * sinkFlow
+        # Calculate edge costs
+        for edgeIndex in range(self.network.numEdges):
+            for capIndex in range(self.network.numArcCaps):
+                edge = self.network.edgesArray[edgeIndex]
+                cap = self.network.possibleArcCapsArray[capIndex]
+                arcObj = self.network.arcsDict[(edge[0], edge[1], cap)]
+                arcFlow = self.assignedFlowDict[(edge[0], edge[1], cap)]
+                self.arcFlows[(edgeIndex, capIndex)] = arcFlow
+                self.arcsOpened[(edgeIndex, capIndex)] = 0
+                if arcFlow > 0:
+                    trueCost += arcObj.fixedCost + arcObj.variableCost * arcFlow
+                    self.arcsOpened[(edgeIndex, capIndex)] = 1
+        self.trueCost = trueCost
+
+    # TODO - Add in a post-processing technique to reduce edges with bidirectional flow and to identify and eliminate cycles
+
+    def writeSolution(self) -> Solution:
+        """Writes the single ant's solution to a Solution instance for visualization/saving"""
+        solution = Solution(self.network, self.minTargetFlow, self.trueCost, self.trueCost, self.sourceFlows,
+                            self.sinkFlows, self.arcFlows, self.arcsOpened, "Ant", False,
+                            self.network.isSourceSinkCapacitated, self.network.isSourceSinkCharged)
+        return solution
 
     def initializeArcsTravelFlowAssignDict(self) -> dict:
         """Adds all possible arcs and supersource/sink as keys to the assigned flow/arcs traveled dictionaries with a value of zero"""
@@ -242,46 +285,6 @@ class Ant:
         self.sinkFlows = []
         self.arcFlows = {}
         self.arcsOpened = {}
-
-    def computeResultingNetwork(self) -> None:
-        """Calculates the cost of the ant's solution"""
-        trueCost = 0.0
-        # Calculate source costs
-        for sourceIndex in range(self.network.numSources):
-            sourceID = self.network.sourcesArray[sourceIndex]
-            sourceCapacity = self.network.sourceCapsArray[sourceIndex]
-            sourceFlow = self.assignedFlowDict[(-1, sourceID, sourceCapacity)]
-            self.sourceFlows.append(sourceFlow)
-            sourceVariableCost = self.network.sourceVariableCostsArray[sourceIndex]
-            trueCost += sourceVariableCost * sourceFlow
-        # Calculate sink costs
-        for sinkIndex in range(self.network.numSinks):
-            sinkID = self.network.sinksArray[sinkIndex]
-            sinkCapacity = self.network.sinkCapsArray[sinkIndex]
-            sinkFlow = self.assignedFlowDict[(sinkID, -2, sinkCapacity)]
-            self.sinkFlows.append(sinkFlow)
-            sinkVariableCost = self.network.sinkVariableCostsArray[sinkIndex]
-            trueCost += sinkVariableCost * sinkFlow
-        # Calculate edge costs
-        for edgeIndex in range(self.network.numEdges):
-            for capIndex in range(self.network.numArcCaps):
-                edge = self.network.edgesArray[edgeIndex]
-                cap = self.network.possibleArcCapsArray[capIndex]
-                arcObj = self.network.arcsDict[(edge[0], edge[1], cap)]
-                arcFlow = self.assignedFlowDict[(edge[0], edge[1], cap)]
-                self.arcFlows[(edgeIndex, capIndex)] = arcFlow
-                self.arcsOpened[(edgeIndex, capIndex)] = 0
-                if arcFlow > 0:
-                    trueCost += arcObj.fixedCost + arcObj.variableCost * arcFlow
-                    self.arcsOpened[(edgeIndex, capIndex)] = 1
-        self.trueCost = trueCost
-
-    def writeSolution(self) -> Solution:
-        """Writes the single ant's solution to a Solution instance for visualization/saving"""
-        solution = Solution(self.network, self.minTargetFlow, self.trueCost, self.trueCost, self.sourceFlows,
-                            self.sinkFlows, self.arcFlows, self.arcsOpened, "Ant", False,
-                            self.network.isSourceSinkCapacitated, self.network.isSourceSinkCharged)
-        return solution
 
     def printTripData(self) -> None:
         """Prints the data at each time step"""

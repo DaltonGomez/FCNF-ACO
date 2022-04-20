@@ -1,6 +1,5 @@
 from src.ACO.Colony import Colony
 from src.Network.FlowNetwork import FlowNetwork
-from src.Network.SolutionVisualizer import SolutionVisualizer
 
 # Load Network
 networkFile = "basic.p"
@@ -8,9 +7,10 @@ network = FlowNetwork()
 network = network.loadNetwork(networkFile)
 
 # Test Colony
-antColony = Colony(network, 120, 20, 5)
+antColony = Colony(network, 20, 1, 2)
 soln = antColony.solveNetwork()
 
-vis = SolutionVisualizer(soln)
-vis.drawGraphWithLabels()
+# Visualize final solution
+# vis = SolutionVisualizer(soln)
+# vis.drawGraphWithLabels()
 print("ACO stopped!")

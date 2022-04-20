@@ -21,10 +21,11 @@ class Colony:
         # Hyperparameters
         self.numEpisodes = numEpisodes  # One episode = All the ants completing one tour (i.e. creating a valid solution) each
         self.numAnts = numAnts  # Number of tours completed per episode
-        self.evaporationRate = 0.50  # rho = Rate at which pheromone is lost (NOTE: 1 = complete loss/episode; 0 = no loss/episode)
+        self.initialPheromoneConcentration = 1.0  # Amount of pheromone initially deposited on arcs
+        self.evaporationRate = 0.10  # rho = Rate at which pheromone is lost (NOTE: 1 = complete loss/episode; 0 = no loss/episode)
         self.alpha = 1  # alpha = Relative importance to the ant of pheromone over "goodness" of arc
         self.beta = 1  # beta = Relative importance to the ant of "goodness" of arc over pheromone
-        self.Q = 5  # Q = Proportionality scalar of best solution, which scales how much pheromone the best solution deposits
+        self.Q = 1000  # Q = Proportionality scalar of best solution, which scales how much pheromone the best solution deposits
 
         # Colony Attributes
         self.population = self.initializePopulation()  # Contains the population of ants
@@ -67,7 +68,7 @@ class Colony:
         if self.bestKnownCost is None:
             self.bestKnownCost = currentBestCost
             self.bestKnownSolution = currentBestAnt.writeSolution()
-        elif self.bestKnownCost > currentBestCost:
+        elif currentBestCost < self.bestKnownCost:
             self.bestKnownCost = currentBestCost
             self.bestKnownSolution = currentBestAnt.writeSolution()
 
@@ -78,6 +79,7 @@ class Colony:
 
     def depositPheromone(self) -> None:
         """Deposits new pheromone on the arcs contained in the best known solution so far"""
+        # Deposit pheromone on edges
         for edgeIndex in range(self.network.numEdges):
             for capIndex in range(self.network.numArcCaps):
                 edge = self.network.edgesArray[edgeIndex]
@@ -85,8 +87,16 @@ class Colony:
                 arcFlow = self.bestKnownSolution.arcFlows[(edgeIndex, capIndex)]
                 if arcFlow > 0.0:
                     self.pheromoneDict[(edge[0], edge[1], cap)] = self.Q / self.bestKnownCost
-                    # TODO - Update deposit pheromone if needed (Currently based on the concave cost NFP paper)
                     # TODO - Deposit pheromone proportional to the amount of flow on the arc, not just if it was opened?
+        # Deposit pheromone on sources
+        for source in range(self.network.numSources):
+            if self.bestKnownSolution.sourceFlows[source] > 0.0:
+                self.pheromoneDict[(-1, source, self.network.sourceCapsArray[source])] = self.Q / self.bestKnownCost
+        # Deposit pheromone on sources
+        for sink in range(self.network.numSinks):
+            if self.bestKnownSolution.sinkFlows[sink] > 0.0:
+                self.pheromoneDict[
+                    (sink, -2, self.network.sinkCapsArray[sink])] = self.Q / self.bestKnownCost
 
     def initializePopulation(self) -> list:
         """Initializes the population with ants objects"""
@@ -97,53 +107,55 @@ class Colony:
         return population
 
     def initializePheromoneDict(self) -> dict:
-        """Adds all possible arcs and supersource/sink as keys to the pheromone dictionary with a value of 1.0"""
+        """Adds all possible arcs and supersource/sink as keys to the pheromone dictionary"""
         pheromoneDict = {}
         # For all edge, cap pairs, initialize with one
         for edge in self.network.edgesArray:
             for cap in self.network.possibleArcCapsArray:
-                pheromoneDict[(edge[0], edge[1], cap)] = 1.0
+                pheromoneDict[(edge[0], edge[1], cap)] = self.initialPheromoneConcentration
         # For all supersource -> source and visa versa, initialize with zero
         for srcIndex in range(self.network.numSources):
             source = self.network.sourcesArray[srcIndex]
             cap = self.network.sourceCapsArray[srcIndex]
-            pheromoneDict[(-1, source, cap)] = 1.0
-            pheromoneDict[(source, -1, -1)] = 1.0
+            pheromoneDict[(-1, source, cap)] = self.initialPheromoneConcentration
+            pheromoneDict[(source, -1, -1)] = 0.0
         # For all supersink -> sink, initialize with zero (NOTE: You can't go back from a supersink)
         for sinkIndex in range(self.network.numSinks):
             sink = self.network.sinksArray[sinkIndex]
             cap = self.network.sinkCapsArray[sinkIndex]
-            pheromoneDict[(sink, -2, cap)] = 1.0
+            pheromoneDict[(sink, -2, cap)] = self.initialPheromoneConcentration
         return pheromoneDict
 
     def initializeGoodnessOfArcDict(self) -> dict:
         """Adds all possible arcs and supersource/sink as keys to the pheromone dictionary with a value of 1/(FixedCost + VariableCost)"""
         # TODO - Determine if there is a better metric for "goodness" of arc (Currently based on the concave cost NFP paper)
+        arcGoodnessScalar = 1000  # Based off the magnitude of the arc costs (~10^2)
         arcGoodnessDict = {}
         # For all edge, cap pairs, initialize with one
         for edge in self.network.edgesArray:
             for cap in self.network.possibleArcCapsArray:
                 arcObj = self.network.arcsDict[(edge[0], edge[1], cap)]
-                arcGoodness = 1 / (arcObj.fixedCost + arcObj.variableCost)
+                arcGoodness = arcGoodnessScalar / (arcObj.fixedCost + arcObj.variableCost)
                 arcGoodnessDict[(edge[0], edge[1], cap)] = arcGoodness
         # For all supersource -> source and visa versa, initialize with zero
         for srcIndex in range(self.network.numSources):
             source = self.network.sourcesArray[srcIndex]
             cap = self.network.sourceCapsArray[srcIndex]
             variableCost = self.network.sourceVariableCostsArray[srcIndex]
-            # srcGoodness = 1/variableCost
-            srcGoodness = 1 / (
-                        variableCost ** 2)  # NOTE: SQUARING THE SOURCES VARIABLE COST TO MAKE MOVING BACK TO THE SOURCE SEEM REALLY NOT GOOD
+            srcGoodness = arcGoodnessScalar / variableCost
+            # srcGoodness = 1 / (variableCost ** 2)  # NOTE: SQUARING THE SOURCES VARIABLE COST TO MAKE MOVING BACK TO THE SOURCE SEEM REALLY NOT GOOD
             # TODO - Understand how the "goodness" influences source and sink super-edges as we want to be moving away from sources and towards sinks when they are adjacent
             arcGoodnessDict[(-1, source, cap)] = srcGoodness
             # TODO - Determine how to weight the "goodness" of the edges that go back to a supersource as these should only be taken when they have to be
-            arcGoodnessDict[(source, -1, -1)] = 0.0001
+            arcGoodnessDict[(
+            source, -1, -1)] = 0.0  # NOTE: MAKES THE "GOODNESS" OF MOVING FROM A SOURCE BACK TO THE SUPERSOURCE ZERO
         # For all supersink -> sink, initialize with zero (NOTE: You can't go back from a supersink)
         for sinkIndex in range(self.network.numSinks):
             sink = self.network.sinksArray[sinkIndex]
             cap = self.network.sinkCapsArray[sinkIndex]
             variableCost = self.network.sinkVariableCostsArray[sinkIndex]
-            sinkGoodness = 100 / variableCost  # NOTE: PUTTING 100 IN THE NUMERATOR TO CREDIT THAT WE WANT TO MOVE TOWARDS SINKS IF WE ARE CLOSE
+            sinkGoodness = (
+                                       10 * arcGoodnessScalar) / variableCost  # NOTE: PUTTING 10x IN THE NUMERATOR TO CREDIT THAT WE WANT TO MOVE TOWARDS SINKS IF WE ARE CLOSE
             # TODO - Understand how the "goodness" influences source and sink super-edges as we want to be moving away from sources and towards sinks when they are adjacent
             arcGoodnessDict[(sink, -2, cap)] = sinkGoodness
         return arcGoodnessDict
