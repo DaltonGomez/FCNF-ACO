@@ -22,19 +22,29 @@ class TuningExperiment:
         self.minTargetFlow = minTargetFlow
 
         # Hyperparameter Attributes (Defines the Grid Search Space)
-        self.numEpisodes = [100]  # TODO - Implement a test to identify the episode number when convergence was achieved
+        self.numEpisodes = [10,
+                            25]  # TODO - Implement a test to identify the episode number when convergence was achieved
+        self.numAnts = [10, 25]
+        self.initialPheromoneConcentration = [1, 1000000]
+        self.evaporationRate = [0.05, 0.10, 0.50]
+        self.alpha = [1, 3]
+        self.beta = [1, 5]
+        self.Q = [1, 5]
+        """
         self.numAnts = [10, 25, 50, 100]
         self.initialPheromoneConcentration = [1, 100, 10000, 1000000]
         self.evaporationRate = [0.05, 0.10, 0.25, 0.50]
         self.alpha = [1, 3, 5, 10]
         self.beta = [1, 3, 5, 10]
         self.Q = [1, 3, 5, 10]
+        """
 
         # Mathematical Programming Solvers
         self.relaxedSolver = RelaxedLPSolverPDLP(network, minTargetFlow)
         self.relaxedCost, self.relaxedSoln = self.findRelaxedSolution()
         self.exactSolver = MILPsolverCPLEX(network, minTargetFlow, isOneArcPerEdge=False)
         self.exactCost, self.exactSoln = self.findExactSolution()
+        print("Mathematical programming solvers executed...")
 
         # ACO Approach
         self.aco = Colony(network, minTargetFlow, self.numAnts[0], self.numEpisodes[0])
