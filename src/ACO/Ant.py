@@ -63,6 +63,7 @@ class Ant:
             self.assignTripFlow()  # Assigns flow to all arcs traveled in the trip, where the amount is equal to the minimum available capacity seen
             self.numTrips += 1  # Increment trips
             # self.printTripData()  # PRINT OPTION
+        self.resolveOpposingFlows()  # Eliminates positive flows in opposing directions on every bidirectional edge
         self.computeResultingNetwork()  # Calculates the cost and data structures for writing to a solution object
         # print("Solution Cost = " + str(self.trueCost) + "\n")  # PRINT OPTION
 
@@ -155,6 +156,40 @@ class Ant:
             self.assignedFlowDict[arc] += minAvailableCapacityDuringTrip
         # Deduct assigned flow from the flow left to assign
         self.remainingFlowToAssign -= minAvailableCapacityDuringTrip
+
+    def resolveOpposingFlows(self) -> None:
+        """Iterates over resulting network and reduces opposing flows to be unidirectional"""
+        # For each edge
+        for edgeIndex in range(self.network.numEdges):
+            forwardFlow = 0
+            backwardFlow = 0
+            edge = self.network.edgesArray[edgeIndex]
+            # Find the total forward and backward flow
+            for capIndex in range(self.network.numArcCaps):
+                cap = self.network.possibleArcCapsArray[capIndex]
+                forwardFlow += self.assignedFlowDict[(edge[0], edge[1], cap)]
+                backwardFlow += self.assignedFlowDict[(edge[1], edge[0], cap)]
+            # Resolve if both non-zero and equal to one another
+            if 0 < forwardFlow == backwardFlow > 0:
+                for capIndex in range(self.network.numArcCaps):
+                    cap = self.network.possibleArcCapsArray[capIndex]
+                    self.assignedFlowDict[(edge[0], edge[1], cap)] = 0
+                    self.assignedFlowDict[(edge[1], edge[0], cap)] = 0
+            # Resolve if both non-zero and forward flow is greater than backward flow
+            # TODO - This (and the complementary condition below) will probably error out on flow distributed across parallel arcs
+            elif forwardFlow > 0 and 0 < backwardFlow < forwardFlow:
+                netFlow = forwardFlow - backwardFlow
+                for capIndex in range(self.network.numArcCaps):
+                    cap = self.network.possibleArcCapsArray[capIndex]
+                    self.assignedFlowDict[(edge[0], edge[1], cap)] = netFlow
+                    self.assignedFlowDict[(edge[1], edge[0], cap)] = 0
+            # Resolve if both non-zero and forward flow is less than backward flow
+            elif 0 < forwardFlow < backwardFlow and backwardFlow > 0:
+                netFlow = backwardFlow - forwardFlow
+                for capIndex in range(self.network.numArcCaps):
+                    cap = self.network.possibleArcCapsArray[capIndex]
+                    self.assignedFlowDict[(edge[0], edge[1], cap)] = 0
+                    self.assignedFlowDict[(edge[1], edge[0], cap)] = netFlow
 
     def computeResultingNetwork(self) -> None:
         """Calculates the cost of the ant's solution"""
