@@ -7,17 +7,17 @@ from src.Solvers.MILPsolverCPLEX import MILPsolverCPLEX
 from src.Solvers.RelaxedLPSolverPDLP import RelaxedLPSolverPDLP
 
 # Load Network
-networkFile = "medium.p"
+networkFile = "smallMultiSrcSink.p"
 network = FlowNetwork()
 network = network.loadNetwork(networkFile)
-targetFlow = 1000
+targetFlow = 400
 
 # Test Colony
-antColony = Colony(network, targetFlow, 25, 25)
-antSoln = antColony.solveNetwork(drawing=False)
+antColony = Colony(network, targetFlow, 50, 10)
+antSoln = antColony.solveNetwork(drawing=True)
 antSoln.saveSolution()
 antVisualizer = SolutionVisualizer(antSoln)
-antVisualizer.drawUnlabeledGraph()
+antVisualizer.drawGraphWithLabels()
 
 # Solve Exactly
 milpSolver = MILPsolverCPLEX(network, targetFlow, isOneArcPerEdge=False)
@@ -26,7 +26,7 @@ milpSolver.solveModel()
 milpSolver.printSolverOverview()
 exactSoln = milpSolver.writeSolution()
 exactVisualizer = SolutionVisualizer(exactSoln)
-exactVisualizer.drawUnlabeledGraph()
+exactVisualizer.drawGraphWithLabels()
 
 # Solve with Naive LP Relaxation
 lpSolver = RelaxedLPSolverPDLP(network, targetFlow)
@@ -36,4 +36,4 @@ lpSolver.solveModel()
 lpSolver.printSolverOverview()
 relaxedSoln = lpSolver.writeSolution()
 relaxedVisualizer = SolutionVisualizer(relaxedSoln)
-relaxedVisualizer.drawUnlabeledGraph()
+relaxedVisualizer.drawGraphWithLabels()

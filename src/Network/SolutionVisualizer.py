@@ -123,7 +123,7 @@ class SolutionVisualizer:
                             },
                             "scaling": {
                                 "min": 2,
-                                "max": 16
+                                "max": 10
                             },
                             "smooth": {
                                 "enabled": false,
@@ -222,7 +222,7 @@ class SolutionVisualizer:
                             },
                             "scaling": {
                                 "min": 2,
-                                "max": 16
+                                "max": 10
                             },
                             "smooth": {
                                 "enabled": false,

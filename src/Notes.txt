@@ -5,10 +5,13 @@ NOTES:
 # TODO - Tune all hyperparameters
 # TODO - Determine the most realistic function/method for creating arc costs
 # TODO - Determine the best pheromone deposition equation (e.g. proportional to the amount of flow on the arc, not just if it was opened)
+Deposit pheromone based on remaining capacity
 # TODO - Determine the best "goodness" of arc calculation
+Consider using the G(e) = 1/(cap/(FC + VC))
 # TODO - Determine if source/sink arcs should have special pheromone deposition and/or "goodness" of arc calculations
 # TODO - Determine the best probability distribution function for edge selection
 # TODO - Adapt to account for parallel arcs (i.e. more than one possible edge capacity)
+# TODO - Implement some post-processing to cancel opposing flows
 
 
 # FUTURE WORK IDEAS:

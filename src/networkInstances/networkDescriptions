@@ -6,3 +6,5 @@ smallMultiSrcSink       12              3                   3               1
 medium                  50              6                   6               1
 large                   250             15                  15              1
 huge                    1000            50                  50              1
+highNodeLoSrcSink       100             3                   3               1
+medNodeLoSrcSink        50              3                   3               1

@@ -87,18 +87,21 @@ class Colony:
                 cap = self.network.possibleArcCapsArray[capIndex]
                 arcFlow = self.bestKnownSolution.arcFlows[(edgeIndex, capIndex)]
                 if arcFlow > 0.0:
-                    self.pheromoneDict[(edge[0], edge[1], cap)] += self.Q / self.bestKnownCost
+                    self.pheromoneDict[(edge[0], edge[1], cap)] += (self.Q * arcFlow) / self.bestKnownCost
         # Deposit pheromone on sources
         for sourceIndex in range(self.network.numSources):
             source = self.network.sourcesArray[sourceIndex]
-            if self.bestKnownSolution.sourceFlows[sourceIndex] > 0.0:
+            srcFlow = self.bestKnownSolution.sourceFlows[sourceIndex]
+            if srcFlow > 0.0:
                 self.pheromoneDict[
-                    (-1, source, self.network.sourceCapsArray[sourceIndex])] += self.Q / self.bestKnownCost
+                    (-1, source, self.network.sourceCapsArray[sourceIndex])] += (self.Q * srcFlow) / self.bestKnownCost
         # Deposit pheromone on sinks
         for sinkIndex in range(self.network.numSinks):
             sink = self.network.sinksArray[sinkIndex]
-            if self.bestKnownSolution.sinkFlows[sinkIndex] > 0.0:
-                self.pheromoneDict[(sink, -2, self.network.sinkCapsArray[sinkIndex])] += self.Q / self.bestKnownCost
+            sinkFlow = self.bestKnownSolution.sinkFlows[sinkIndex]
+            if sinkFlow > 0.0:
+                self.pheromoneDict[(sink, -2, self.network.sinkCapsArray[sinkIndex])] += (
+                                                                                                     self.Q * sinkFlow) / self.bestKnownCost
 
     def initializePopulation(self) -> list:
         """Initializes the population with ants objects"""
@@ -130,20 +133,20 @@ class Colony:
 
     def initializeGoodnessOfArcDict(self) -> dict:
         """Adds all possible arcs and supersource/sink as keys to the pheromone dictionary with a value of 1/(FixedCost + VariableCost)"""
-        arcGoodnessScalar = 1000  # Based off the magnitude of the arc costs (~10^2)
+        arcGoodnessScalar = 10  # Based off the magnitude of the arc costs (~10^2)
         arcGoodnessDict = {}
         # For all edge, cap pairs, initialize with one
         for edge in self.network.edgesArray:
             for cap in self.network.possibleArcCapsArray:
                 arcObj = self.network.arcsDict[(edge[0], edge[1], cap)]
-                arcGoodness = arcGoodnessScalar / (arcObj.fixedCost + arcObj.variableCost)
+                arcGoodness = (arcGoodnessScalar * cap) / (arcObj.fixedCost + arcObj.variableCost)
                 arcGoodnessDict[(edge[0], edge[1], cap)] = arcGoodness
         # For all supersource -> source and visa versa, initialize with zero
         for srcIndex in range(self.network.numSources):
             source = self.network.sourcesArray[srcIndex]
             cap = self.network.sourceCapsArray[srcIndex]
             variableCost = self.network.sourceVariableCostsArray[srcIndex]
-            srcGoodness = arcGoodnessScalar / variableCost
+            srcGoodness = (cap * arcGoodnessScalar) / variableCost
             arcGoodnessDict[(-1, source, cap)] = srcGoodness
             arcGoodnessDict[(source, -1, -1)] = 0.0  # NOTE: MAKES THE "GOODNESS" OF MOVING SOURCE -> SUPERSOURCE ZERO
         # For all supersink -> sink, initialize with zero (NOTE: You can't go back from a supersink)
@@ -151,7 +154,8 @@ class Colony:
             sink = self.network.sinksArray[sinkIndex]
             cap = self.network.sinkCapsArray[sinkIndex]
             variableCost = self.network.sinkVariableCostsArray[sinkIndex]
-            sinkGoodness = (10 * arcGoodnessScalar) / variableCost  # NOTE: 10x SCALAR CREDITS SINK -> SUPERSINK MOVES
+            sinkGoodness = (
+                                       cap * arcGoodnessScalar ** 2) / variableCost  # NOTE: SCALAR^2 CREDITS SINK -> SUPERSINK MOVES
             arcGoodnessDict[(sink, -2, cap)] = sinkGoodness
         return arcGoodnessDict
 

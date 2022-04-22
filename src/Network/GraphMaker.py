@@ -167,6 +167,7 @@ class GraphMaker:
 
     def calculateArcFixedCost(self, distance: float, capacity: int) -> float:
         """Calculates the fixed cost of the arc in a pseudorandom manner"""
+        # TODO - Apply the pipeline cost function: c(f) = (m*cap + b) * edge_specific_penalty (which is based on distance)
         # Pseudorandom component proportional to the distance the edge spans
         randomDistanceComponent = (self.distFixCostScale * distance * random.uniform(
             self.fixCostRandomScalar[0], self.fixCostRandomScalar[1]))
