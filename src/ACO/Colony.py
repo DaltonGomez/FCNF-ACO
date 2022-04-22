@@ -33,6 +33,7 @@ class Colony:
         self.goodnessDict = self.initializeGoodnessOfArcDict()  # Dictionary indexed on key (fromNode, toNode, cap) with value (eta) (i.e. the "goodness" of taking that arc)
         self.bestKnownCost = None  # Stores the lowest cost solution found so far
         self.bestKnownSolution = None  # Stores the global best solution found so far
+        self.convergenceData = []  # Stores the best known cost after each episode of the colony
         self.visual = None  # Object used to view the best solutions of the episode over time
 
     def solveNetwork(self, drawing=True) -> Solution:
@@ -48,6 +49,7 @@ class Colony:
             # POST-EXPLORATION DAEMON UPDATES
             # print("Doing post-exploration updates...")  # PRINT OPTION
             self.updateBestSolution()  # Updates the best solution only if this population contains it
+            self.convergenceData.append(self.bestKnownCost)  # Save the best known cost at this episode
             self.evaporatePheromone()  # Reduces the pheromone across the entire dictionary based on rho
             self.depositPheromone()  # Deposits new pheromone on the arcs in the best known solution
             self.resetAllAnts()  # Clears the tour/solution attributes of every ant in the population for the next episode

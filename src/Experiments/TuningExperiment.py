@@ -22,8 +22,7 @@ class TuningExperiment:
         self.minTargetFlow = minTargetFlow
 
         # Hyperparameter Attributes (Defines the Grid Search Space)
-        self.numEpisodes = [10,
-                            25]  # TODO - Implement a test to identify the episode number when convergence was achieved
+        self.numEpisodes = [10, 25]
         self.numAnts = [10, 25]
         self.initialPheromoneConcentration = [1, 1000000]
         self.evaporationRate = [0.05, 0.10, 0.50]
@@ -61,11 +60,16 @@ class TuningExperiment:
                     for alphaValue in self.alpha:
                         for betaValue in self.beta:
                             for qValue in self.Q:
+                                # Set this batch of hyperparameters
                                 self.setAntColonyHyperparameters(ants, initialPheromone, evaporation, alphaValue,
                                                                  betaValue, qValue)
+                                # Solve the network
                                 currSoln = self.aco.solveNetwork(drawing=False)
+                                # Output data
                                 outputRow = [ants, initialPheromone, evaporation, alphaValue, betaValue, qValue,
                                              currSoln.trueCost]
+                                for ep in range(self.aco.numEpisodes):
+                                    outputRow.append(self.aco.convergenceData[ep])
                                 print("\nSolved:")
                                 print(outputRow)
                                 self.outputBlock.append(outputRow)
@@ -121,4 +125,5 @@ class TuningExperiment:
         self.outputBlock.append(["Exact Cost", self.exactCost])
         self.outputBlock.append(["Relaxed Cost", self.relaxedCost])
         self.outputBlock.append(["TUNING EXPERIMENT OUTPUT"])
-        self.outputBlock.append(["Num. Ants", "Initial Pheromone", "Evap. Rate", "Alpha", "Beta", "Q", "Best Cost"])
+        self.outputBlock.append(
+            ["Num. Ants", "Initial Pheromone", "Evap. Rate", "Alpha", "Beta", "Q", "Best Cost", "Convergence"])
