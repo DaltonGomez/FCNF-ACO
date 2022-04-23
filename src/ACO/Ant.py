@@ -63,6 +63,9 @@ class Ant:
             self.assignTripFlow()  # Assigns flow to all arcs traveled in the trip, where the amount is equal to the minimum available capacity seen
             self.numTrips += 1  # Increment trips
             # self.printTripData()  # PRINT OPTION
+            if self.time > 100000:  # Restart if timed out
+                print("Restarting ant!")
+                self.resetTourAndSolutionAttributes()
         self.resolveOpposingFlows()  # Eliminates positive flows in opposing directions on every bidirectional edge
         self.computeResultingNetwork()  # Calculates the cost and data structures for writing to a solution object
         # print("Solution Cost = " + str(self.trueCost) + "\n")  # PRINT OPTION

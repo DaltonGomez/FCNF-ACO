@@ -22,21 +22,13 @@ class TuningExperiment:
         self.minTargetFlow = minTargetFlow
 
         # Hyperparameter Attributes (Defines the Grid Search Space)
-        self.numEpisodes = [10, 25]
-        self.numAnts = [10, 25]
-        self.initialPheromoneConcentration = [1, 1000000]
-        self.evaporationRate = [0.05, 0.10, 0.50]
-        self.alpha = [1, 3]
-        self.beta = [1, 5]
-        self.Q = [1, 5]
-        """
-        self.numAnts = [10, 25, 50, 100]
-        self.initialPheromoneConcentration = [1, 100, 10000, 1000000]
-        self.evaporationRate = [0.05, 0.10, 0.25, 0.50]
-        self.alpha = [1, 3, 5, 10]
-        self.beta = [1, 3, 5, 10]
-        self.Q = [1, 3, 5, 10]
-        """
+        self.numEpisodes = [15]
+        self.numAnts = [10, 25, 50]
+        self.initialPheromoneConcentration = [1, 10000, 1000000]
+        self.evaporationRate = [0.05, 0.50, 0.75]
+        self.alpha = [1, 3, 10]
+        self.beta = [1, 3, 10]
+        self.Q = [1, 5, 20]
 
         # Mathematical Programming Solvers
         self.relaxedSolver = RelaxedLPSolverPDLP(network, minTargetFlow)
