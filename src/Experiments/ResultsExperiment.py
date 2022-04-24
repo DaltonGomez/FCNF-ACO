@@ -25,6 +25,9 @@ class ResultsExperiment:
         # Experimental Results
         self.outputBlock = []
         self.buildOutputHeader()
+        now = datetime.now()
+        uniqueID = now.strftime("%d_%m_%Y_%H_%M")
+        self.fileName = "Results_" + uniqueID
 
     def runExperiment(self) -> None:
         """Runs a grid search hyperparameter tuning experiment"""
@@ -75,6 +78,7 @@ class ResultsExperiment:
             # Compute Optimality Gap
             optimalityGap = ((acoAverage / exactValue) - 1) * 100
             outputRow.append(optimalityGap)
+            self.writeLineToTxtEnd(outputRow)
             self.outputBlock.append(outputRow)
         self.writeOutputBlock()
         print("\nRESULTS EXPERIMENT COMPLETE!")
@@ -91,11 +95,14 @@ class ResultsExperiment:
 
     def writeOutputBlock(self) -> None:
         """Writes the output block to a csv file"""
-        now = datetime.now()
-        uniqueID = now.strftime("%d_%m_%Y_%H_%M")
-        fileName = "Results_" + uniqueID + ".csv"
-        print("Writing output block to: " + fileName)
-        file = open(fileName, "w+", newline="")
+        csvName = self.fileName + ".csv"
+        print("Writing output block to: " + csvName)
+        file = open(csvName, "w+", newline="")
         with file:
             write = csv.writer(file)
             write.writerows(self.outputBlock)
+
+    def writeLineToTxtEnd(self, outputRow: list) -> None:
+        txtName = self.fileName + ".txt"
+        with open(txtName, "a") as file_object:
+            file_object.write(str(outputRow) + "\n")
