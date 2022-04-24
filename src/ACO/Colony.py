@@ -21,11 +21,11 @@ class Colony:
         # Hyperparameters
         self.numEpisodes = numEpisodes  # One episode = All the ants completing one tour (i.e. creating a valid solution) each
         self.numAnts = numAnts  # Number of tours completed per episode
-        self.initialPheromoneConcentration = 5.0  # Amount of pheromone initially deposited on arcs
-        self.evaporationRate = 0.05  # rho = Rate at which pheromone is lost (NOTE: 1 = complete loss/episode; 0 = no loss/episode)
+        self.initialPheromoneConcentration = 1000000  # Amount of pheromone initially deposited on arcs
+        self.evaporationRate = 0.75  # rho = Rate at which pheromone is lost (NOTE: 1 = complete loss/episode; 0 = no loss/episode)
         self.alpha = 1  # alpha = Relative importance to the ant of pheromone over "goodness" of arc
-        self.beta = 1  # beta = Relative importance to the ant of "goodness" of arc over pheromone
-        self.Q = 1000  # Q = Proportionality scalar of best solution, which scales how much pheromone the best solution deposits
+        self.beta = 10  # beta = Relative importance to the ant of "goodness" of arc over pheromone
+        self.Q = 20  # Q = Proportionality scalar of best solution, which scales how much pheromone the best solution deposits
 
         # Colony Attributes
         self.population = self.initializePopulation()  # Contains the population of ants
