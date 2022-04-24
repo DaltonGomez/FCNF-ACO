@@ -63,7 +63,7 @@ class ResultsExperiment:
             print("Relaxed solution found...")
             # Run ACO trials
             acoTrials = []
-            for trial in range(5):
+            for trial in range(10):
                 aco = Colony(network, minTargetFlow, self.numAnts, self.numEpisodes)
                 aco.solveNetwork(drawing=False)
                 outputRow.append(aco.bestKnownCost)
@@ -86,7 +86,8 @@ class ResultsExperiment:
         self.outputBlock.append(["EXPERIMENTAL RESULTS OUTPUT", timestamp])
         self.outputBlock.append(
             ["Num. Nodes", "Num. Parallel Edges", "Num. Src/Sinks", "Min. Target Flow", "Optimal MILP Value",
-             "Relaxed LP Value", "ACO 1", "ACO 2", "ACO 3", "ACO 4", "ACO 5", "Avg. ACO Value", "Optimality Gap"])
+             "Relaxed LP Value", "ACO 1", "ACO 2", "ACO 3", "ACO 4", "ACO 5", "ACO 6", "ACO 7", "ACO 8", "ACO 9",
+             "ACO 10", "Avg. ACO Value", "Optimality Gap"])
 
     def writeOutputBlock(self) -> None:
         """Writes the output block to a csv file"""
