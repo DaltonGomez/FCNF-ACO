@@ -1,7 +1,7 @@
 from src.Network.GraphMaker import GraphMaker
 
-name = "400-1-10-3"
-numNodes = 400
+name = "25-1-10-3"
+numNodes = 25
 numSources = 10
 numSinks = 10
 
