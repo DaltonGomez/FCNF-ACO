@@ -90,7 +90,7 @@ class SolutionVisualizer:
                                 "y": true
                             },
                             "font": {
-                                "size": 25,
+                                "size": 0,
                                 "color": "rgba(0, 0, 200, 1)",
                                 "strokeWidth": 2,
                                 "strokeColor": "rgba(0, 200, 0, 1)"

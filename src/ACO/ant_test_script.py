@@ -7,13 +7,13 @@ from src.Solvers.MILPsolverCPLEX import MILPsolverCPLEX
 from src.Solvers.RelaxedLPSolverPDLP import RelaxedLPSolverPDLP
 
 # Load Network
-networkFile = "smallMultiSrcSink.p"
+networkFile = "demoForPaper2.p"
 network = FlowNetwork()
 network = network.loadNetwork(networkFile)
-targetFlow = 400
+targetFlow = 350
 
 # Test Colony
-antColony = Colony(network, targetFlow, 50, 10)
+antColony = Colony(network, targetFlow, 2, 15)
 antSoln = antColony.solveNetwork(drawing=True)
 antSoln.saveSolution()
 antVisualizer = SolutionVisualizer(antSoln)
