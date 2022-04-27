@@ -51,7 +51,7 @@ class FlowNetwork:
     # ===================================================
     # ============== VISUALIZATION METHODS ==============
     # ===================================================
-    def drawNetworkTriangulation(self):
+    def drawNetworkTriangulation(self) -> None:
         """Draws the Delaunay triangulation of the network with MatPlotLib for quick judgement of topology"""
         triangulation = Delaunay(self.points)
         plt.triplot(self.points[:, 0], self.points[:, 1], triangulation.simplices)
@@ -89,7 +89,7 @@ class FlowNetwork:
         pickle.dump(self, open(catPath, "wb"))
 
     @staticmethod
-    def loadNetwork(networkFile: str):
+    def loadNetwork(networkFile: str) -> None:
         """Loads a network instance via a pickle load"""
         # Path management
         currDir = os.getcwd()
