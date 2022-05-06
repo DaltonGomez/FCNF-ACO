@@ -1,2 +1,2 @@
 # FCNF-ACO
- Ant Colony Optimization implementation for the FCNFP
+An Ant Colony Optimization Implementation for the Fixed-Charge Network Flow Problem
